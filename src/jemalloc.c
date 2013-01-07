@@ -74,14 +74,14 @@ static const void (WINAPI *init_init_lock)(void) = _init_init_lock;
 static malloc_mutex_t	init_lock = MALLOC_MUTEX_INITIALIZER;
 #endif
 
+#ifdef JEMALLOC_UTRACE
 typedef struct {
 	void	*p;	/* Input pointer (as in realloc(p, s)). */
 	size_t	s;	/* Request size. */
 	void	*r;	/* Result pointer. */
 } malloc_utrace_t;
 
-#ifdef JEMALLOC_UTRACE
-#  define UTRACE(a, b, c) do {						\
+#  define UTRACE1(a, b, c) do {						\
 	if (opt_utrace) {						\
 		malloc_utrace_t ut;					\
 		ut.p = (a);						\
@@ -90,6 +90,39 @@ typedef struct {
 		utrace(&ut, sizeof(ut));				\
 	}								\
 } while (0)
+#else
+#  define UTRACE1(a, b, c)
+#endif
+
+#ifdef JEMALLOC_UTRACE2
+typedef struct {
+	int	ut_type;    /* utrace type UTRACE_MALLOC */
+	int	ut_version;	/* utrace malloc version */
+	void	*p;	/* Input pointer (as in realloc(p, s)). */
+	size_t	s;	/* Request size. */
+	void	*r;	/* Result pointer. */
+	void	*ut_caller;    /* Caller */
+} malloc_utrace2_t;
+#endif
+
+#  define UTRACE2(a, b, c) do {						\
+	if (opt_utrace2) {						\
+		malloc_utrace2_t ut;					\
+		ut.ut_type = UTRACE_MALLOC;				\
+		ut.ut_version = 2;					\
+		ut.p = (a);						\
+		ut.s = (b);						\
+		ut.r = (c);						\
+		ut.ut_caller = __builtin_return_address(0);		\
+		utrace2(&ut, sizeof(ut));				\
+	}								\
+} while (0)
+#else
+#  define UTRACE2(a, b, c)
+#endif
+
+#if defined(JEMALLOC_UTRACE) || defined(JEMALLOC_UTRACE2)
+#  define UTRACE(a, b, c) do { UTRACE1(a, b, c); UTRACE2(a, b, c); } while (0)
 #else
 #  define UTRACE(a, b, c)
 #endif
@@ -970,7 +1003,6 @@ label_return:
 	}
 	if (config_prof && opt_prof && result != NULL)
 		prof_malloc(result, usize, cnt);
-	UTRACE(0, size, result);
 	return (ret);
 }
 
@@ -980,6 +1012,7 @@ je_posix_memalign(void **memptr, size_t alignment, size_t size)
 	int ret = imemalign(memptr, alignment, size, sizeof(void *));
 	JEMALLOC_VALGRIND_MALLOC(ret == 0, *memptr, isalloc(*memptr,
 	    config_prof), false);
+	UTRACE(0, size, *memptr);
 	return (ret);
 }
 
@@ -995,6 +1028,7 @@ je_aligned_alloc(size_t alignment, size_t size)
 	}
 	JEMALLOC_VALGRIND_MALLOC(err == 0, ret, isalloc(ret, config_prof),
 	    false);
+	UTRACE(0, size, ret);
 	return (ret);
 }
 
@@ -1260,6 +1294,7 @@ je_memalign(size_t alignment, size_t size)
 	void *ret JEMALLOC_CC_SILENCE_INIT(NULL);
 	imemalign(&ret, alignment, size, 1);
 	JEMALLOC_VALGRIND_MALLOC(ret != NULL, ret, size, false);
+	UTRACE(0, size, ret);
 	return (ret);
 }
 #endif
@@ -1271,6 +1306,7 @@ je_valloc(size_t size)
 	void *ret JEMALLOC_CC_SILENCE_INIT(NULL);
 	imemalign(&ret, PAGE, size, 1);
 	JEMALLOC_VALGRIND_MALLOC(ret != NULL, ret, size, false);
+	UTRACE(0, size, ret);
 	return (ret);
 }
 #endif

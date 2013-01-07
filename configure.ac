@@ -848,6 +848,34 @@ if test "x$enable_utrace" = "x1" ; then
 fi
 AC_SUBST([enable_utrace])
 
+dnl Disable utrace2(2)-based tracing by default.
+AC_ARG_ENABLE([utrace2],
+  [AS_HELP_STRING([--enable-utrace2], [Enable utrace2(2)-based tracing (with traceback)])],
+[if test "x$enable_utrace2" = "xno" ; then
+  enable_utrace2="0"
+else
+  enable_utrace2="1"
+fi
+],
+[enable_utrace2="0"]
+)
+JE_COMPILABLE([utrace2(2)], [
+#include <sys/types.h>
+#include <sys/param.h>
+#include <sys/time.h>
+#include <sys/uio.h>
+#include <sys/ktrace.h>
+], [
+	utrace2((void *)0, 0);
+], [je_cv_utrace2])
+if test "x${je_cv_utrace2}" = "xno" ; then
+  enable_utrace2="0"
+fi
+if test "x$enable_utrace2" = "x1" ; then
+  AC_DEFINE([JEMALLOC_UTRACE2], [ ])
+fi
+AC_SUBST([enable_utrace2])
+
 dnl Support Valgrind by default.
 AC_ARG_ENABLE([valgrind],
   [AS_HELP_STRING([--disable-valgrind], [Disable support for Valgrind])],
@@ -1279,6 +1307,7 @@ AC_MSG_RESULT([prof-gcc           : ${enable_prof_gcc}])
 AC_MSG_RESULT([tcache             : ${enable_tcache}])
 AC_MSG_RESULT([fill               : ${enable_fill}])
 AC_MSG_RESULT([utrace             : ${enable_utrace}])
+AC_MSG_RESULT([utrace             : ${enable_utrace2}])
 AC_MSG_RESULT([valgrind           : ${enable_valgrind}])
 AC_MSG_RESULT([xmalloc            : ${enable_xmalloc}])
 AC_MSG_RESULT([mremap             : ${enable_mremap}])
