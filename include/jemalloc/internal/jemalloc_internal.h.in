@@ -165,6 +165,13 @@ static const bool config_utrace =
     false
 #endif
     ;
+static const bool config_utrace2 =
+#ifdef JEMALLOC_UTRACE2
+    true
+#else
+    false
+#endif
+    ;
 static const bool config_valgrind =
 #ifdef JEMALLOC_VALGRIND
     true
@@ -506,6 +513,7 @@ extern bool	opt_junk;
 extern size_t	opt_quarantine;
 extern bool	opt_redzone;
 extern bool	opt_utrace;
+extern bool	opt_utrace2;
 extern bool	opt_valgrind;
 extern bool	opt_xmalloc;
 extern bool	opt_zero;
