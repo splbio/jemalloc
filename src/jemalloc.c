@@ -103,7 +103,6 @@ typedef struct {
 	void	*r;	/* Result pointer. */
 	void	*ut_caller;    /* Caller */
 } malloc_utrace2_t;
-#endif
 
 #  define UTRACE2(a, b, c) do {						\
 	if (opt_utrace2) {						\
